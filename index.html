@@ -645,20 +645,23 @@ function renderLB(){
     const cells = (e.votes||[]).map((v,idx)=>{
       if(!v) return `<div class="lb-pick">—</div>`;
       const mVal = (e.margins && e.margins[idx]!=null) ? e.margins[idx] : null;
-      const mLabel = mVal!==null ? `贏${mVal}分` : '';
       if(results[idx]===null){
-        const mTag = mLabel ? `<span class="margin-tag">${mLabel}</span>` : '';
+        const mTag = mVal!==null
+          ? `<span class="margin-tag">贏${mVal}分</span>`
+          : `<span class="margin-tag m-wrong">未填</span>`;
         return `<div class="lb-pick on">${v}${mTag}</div>`;
       }
       const ok = v===results[idx];
       const mDecided = marginResults[idx]!==null;
       const mOk = mDecided && mVal===marginResults[idx];
-      const mTag = mLabel ? `<span class="margin-tag${mDecided?(mOk?' m-ok':' m-wrong'):''}">${mLabel}</span>` : '';
+      const mTag = mVal!==null
+        ? `<span class="margin-tag${mDecided?(mOk?' m-ok':' m-wrong'):''}">${`贏${mVal}分`}</span>`
+        : `<span class="margin-tag m-wrong">未填</span>`;
       return `<div class="lb-pick ${ok?'correct':'wrong'}">${ok?'✓':'✗'} ${v}${mTag}</div>`;
     }).join('');
     const sub=(e.votes||[]).map((v,i)=>{
       const mVal=(e.margins&&e.margins[i]!=null)?e.margins[i]:null;
-      return v?`${v}${mVal!==null?`(贏${mVal}分)`:''}` :'—';
+      return v?`${v}(${mVal!==null?`贏${mVal}分`:'未填'})` :'—';
     }).join(' · ');
     const scoreClass=`s${e.correct}`;
     const scoreBadge=decided>0?`<span class="score-badge ${scoreClass}">${e.correct}/${decided} 正確</span>`:'';
