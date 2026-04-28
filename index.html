@@ -693,7 +693,7 @@ onSnapshot(query(colRef,orderBy('time')),(snap)=>{
   restoreMyStatus(nameToCheck);
   renderLB();
 });
-onSnapshot(resultsRef,(snap)=>{
+const unsubResults=onSnapshot(resultsRef,(snap)=>{
   if(snap.exists()){
     const d=snap.data();
     results=[d.r0||null,d.r1||null,d.r2||null];
@@ -701,23 +701,18 @@ onSnapshot(resultsRef,(snap)=>{
     scoreB=[d.b0||null,d.b1||null,d.b2||null];
     marginResults=[d.m0??null,d.m1??null,d.m2??null];
     updateCardScores();
+    // 全部比賽結束：隱藏傷兵欄，取消監聽（分數已定，不再更新）
+    if(results.every(r=>r!==null)){
+      const injBox=document.querySelector('.injury-box');
+      if(injBox)injBox.style.display='none';
+      unsubResults();
+    }
   }
   renderLB();
 });
 
 function updateCardScores(){
   const allMatches=SECTIONS.flatMap(s=>s.matches);
-  const allResultsIn=results.every(r=>r!==null);
-  if(allResultsIn){
-    // 全部比賽結束：隱藏傷兵欄、清除卡片分數（排行榜為主）
-    const injBox=document.querySelector('.injury-box');
-    if(injBox)injBox.style.display='none';
-    allMatches.forEach(m=>{
-      const vsEl=document.getElementById(`vs-${m.id}`);
-      if(vsEl)vsEl.innerHTML='';
-    });
-    return;
-  }
   allMatches.forEach(m=>{
     const vsEl=document.getElementById(`vs-${m.id}`);
     if(!vsEl)return;
