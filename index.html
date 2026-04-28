@@ -21,6 +21,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 
 .prev-link{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px 18px;margin-bottom:18px;display:flex;align-items:center;gap:10px;animation:dn .5s ease both;text-decoration:none;color:var(--text);transition:box-shadow .2s}
 .prev-link:hover{box-shadow:0 4px 18px rgba(29,66,138,.15)}
+.next-link{background:linear-gradient(135deg,#f0f8ff,#e8f4ff);border:1px solid rgba(29,66,138,.3);border-radius:14px;padding:14px 20px;margin-top:28px;display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text);transition:box-shadow .2s,transform .2s}
+.next-link:hover{box-shadow:0 4px 18px rgba(29,66,138,.18);transform:translateY(-2px)}
 .codex-link{background:linear-gradient(135deg,#fff8f0,#fff3e0);border:1px solid #f0c090;border-radius:14px;padding:13px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text);transition:box-shadow .2s;animation:slideUp .5s ease .05s both}
 .codex-link:hover{box-shadow:0 4px 18px rgba(220,120,30,.18)}
 .codex-icon{font-size:22px}
@@ -323,6 +325,15 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,9vw,76px);line-heigh
   </div>
 </div>
 
+<a class="next-link" href="https://maskywg.github.io/nba-0430-predict/" target="_blank">
+  <div style="font-size:24px">🏀</div>
+  <div style="flex:1">
+    <div style="font-size:12px;font-weight:900;color:#1D428A;letter-spacing:1px;margin-bottom:2px">下一場賽事預測 →</div>
+    <div style="font-size:13px;font-weight:700">4/30 魔術/活塞・暴龍/騎士・火箭/湖人</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:3px">💡 完成 4/30 預測後即可領取今日（4/29）球星海報</div>
+  </div>
+  <div style="font-size:20px;color:var(--muted)">›</div>
+</a>
 </div>
 <div class="toast" id="toast"></div>
 
