@@ -707,6 +707,17 @@ onSnapshot(resultsRef,(snap)=>{
 
 function updateCardScores(){
   const allMatches=SECTIONS.flatMap(s=>s.matches);
+  const allResultsIn=results.every(r=>r!==null);
+  if(allResultsIn){
+    // 全部比賽結束：隱藏傷兵欄、清除卡片分數（排行榜為主）
+    const injBox=document.querySelector('.injury-box');
+    if(injBox)injBox.style.display='none';
+    allMatches.forEach(m=>{
+      const vsEl=document.getElementById(`vs-${m.id}`);
+      if(vsEl)vsEl.innerHTML='';
+    });
+    return;
+  }
   allMatches.forEach(m=>{
     const vsEl=document.getElementById(`vs-${m.id}`);
     if(!vsEl)return;
