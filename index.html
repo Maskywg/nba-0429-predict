@@ -109,6 +109,19 @@ h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,9vw,76px);line-heigh
 .vbtn .ck{display:none;margin-left:5px;font-size:13px}
 .vbtn.sel-l .ck,.vbtn.sel-r .ck{display:inline}
 
+/* ── 差距預測 ─────────────── */
+.margin-row{border-top:1px dashed rgba(29,66,138,.2);padding-top:12px;margin-top:12px}
+.margin-lbl{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.margin-btns{display:flex;gap:6px}
+.mbtn{flex:1;padding:9px 4px;border-radius:9px;border:1.5px solid var(--border);background:rgba(29,66,138,.04);color:var(--text);font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .18s;text-align:center;line-height:1.3}
+.mbtn:hover:not(:disabled){background:rgba(29,66,138,.1);border-color:#1D428A;transform:scale(1.02)}
+.mbtn:disabled{opacity:.4;cursor:not-allowed}
+.mbtn.sel{background:linear-gradient(135deg,rgba(29,66,138,.2),rgba(29,66,138,.08));border-color:#1D428A;color:#1D428A;box-shadow:0 0 10px rgba(29,66,138,.12)}
+.margin-tag{font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(29,66,138,.07);color:#5577aa;border:1px solid rgba(29,66,138,.2);display:inline-block;margin-top:2px}
+.margin-tag.m-ok{background:rgba(22,163,74,.1);color:#16a34a;border-color:rgba(22,163,74,.3)}
+.margin-tag.m-wrong{background:rgba(220,38,38,.06);color:#dc2626;border-color:rgba(220,38,38,.2);text-decoration:line-through;opacity:.7}
+.margin-badge{font-size:10px;font-weight:900;padding:2px 8px;border-radius:100px;background:rgba(29,66,138,.1);color:#1D428A;border:1px solid rgba(29,66,138,.25);margin-left:5px;vertical-align:middle}
+
 .lock-overlay{position:absolute;inset:0;background:rgba(220,230,255,.8);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#1D428A;letter-spacing:2px;backdrop-filter:blur(3px);z-index:5}
 
 .submit-wrap{margin-top:36px;text-align:center;animation:slideUp .5s ease .7s both}
@@ -357,8 +370,11 @@ const SECTIONS = [
 ];
 
 const MATCH_COUNT = 3;
+const MARGIN_LABELS = ['≤10分', '11-20分', '21分+'];
 let votes = new Array(MATCH_COUNT).fill(null), locked = false, myName = '';
+let margins = new Array(MATCH_COUNT).fill(null); // 0=≤10, 1=11-20, 2=21+
 let results = [null, null, null], latestDB = [];
+let marginResults = [null, null, null]; // 實際比賽差距分類
 let scoreA  = [null, null, null];
 let scoreB  = [null, null, null];
 let modifyMode = false, myModified = false, hasSubmitted = false;
@@ -403,6 +419,14 @@ function renderMatches() {
               <button class="vbtn" onclick="pick(${m.id},'${m.teamA.name}','l',this)">${m.teamA.emoji} ${m.teamA.name}<span class="ck">✓</span></button>
               <button class="vbtn" onclick="pick(${m.id},'${m.teamB.name}','r',this)">${m.teamB.emoji} ${m.teamB.name}<span class="ck">✓</span></button>
             </div>
+            <div class="margin-row">
+              <div class="margin-lbl">📏 勝分差距（同分決勝）</div>
+              <div class="margin-btns">
+                <button class="mbtn" data-mid="${m.id}" onclick="pickMargin(${m.id},0,this)">≤ 10分</button>
+                <button class="mbtn" data-mid="${m.id}" onclick="pickMargin(${m.id},1,this)">11 - 20分</button>
+                <button class="mbtn" data-mid="${m.id}" onclick="pickMargin(${m.id},2,this)">21分以上</button>
+              </div>
+            </div>
           </div>
         </div>`;
     });
@@ -429,6 +453,7 @@ function lockAll(){
   document.getElementById('subbtn').disabled = true;
   document.getElementById('modify-btn').style.display = 'none';
   document.querySelectorAll('.vbtn').forEach(b => b.disabled = true);
+  document.querySelectorAll('.mbtn').forEach(b => b.disabled = true);
   document.querySelectorAll('.card').forEach(c => {
     const o = document.createElement('div');
     o.className = 'lock-overlay'; o.textContent = '🔒 已截止'; c.appendChild(o);
@@ -456,6 +481,17 @@ function restoreMyStatus(nameToCheck){
     if(m && v === m.teamA.name) btnL.classList.add('sel-l');
     else btnR.classList.add('sel-r');
   });
+  if(me.margins) {
+    me.margins.forEach((val, i) => {
+      if(val === null || val === undefined) return;
+      margins[i] = val;
+      const card = document.querySelector(`.card[data-i="${i}"]`);
+      if(!card) return;
+      const mbtns = card.querySelectorAll('.mbtn');
+      mbtns.forEach(b => b.classList.remove('sel'));
+      if(mbtns[val]) mbtns[val].classList.add('sel');
+    });
+  }
   document.getElementById('subbtn').disabled = true;
   document.getElementById('poster-link').style.display = 'block';
   showModifyUI();
@@ -474,14 +510,25 @@ window.pick = function(idx, team, side, btn){
   setTimeout(()=>btn.style.transform='',140);
 };
 
+window.pickMargin = function(idx, val, btn){
+  if(locked) return;
+  document.querySelectorAll(`.mbtn[data-mid="${idx}"]`).forEach(b => b.classList.remove('sel'));
+  margins[idx] = val;
+  btn.classList.add('sel');
+  btn.style.transform='scale(.95)';
+  setTimeout(()=>btn.style.transform='',140);
+};
+
 window.submitPrediction = async function(){
   if(locked){ toast('⛔ 已截止，無法再修改！'); return; }
   myName = document.getElementById('pname').value.trim();
   if(!myName){ toast('⚠️ 請輸入你的名字！'); return; }
   const miss = votes.filter(v=>!v).length;
   if(miss){ toast(`⚠️ 還有 ${miss} 場未選！`); return; }
+  const missMgn = margins.filter(v=>v===null).length;
+  if(missMgn){ toast(`⚠️ 還有 ${missMgn} 場未選差距！`); return; }
   const key = myName.toLowerCase().replace(/\s+/g,'_');
-  await setDoc(doc(colRef,key),{name:myName,votes:[...votes],time:Date.now(),modified:false});
+  await setDoc(doc(colRef,key),{name:myName,votes:[...votes],margins:[...margins],time:Date.now(),modified:false});
   hasSubmitted = true;
   localStorage.setItem('nba0429_name', myName);
   toast('✅ 預測已送出！');
@@ -519,6 +566,7 @@ window.enterModifyMode = async function(){
   modifyMode = true;
   restoreMyStatus(myName);
   document.querySelectorAll('.vbtn').forEach(b => b.disabled = false);
+  document.querySelectorAll('.mbtn').forEach(b => b.disabled = false);
   document.getElementById('subbtn').textContent = '✏️ 確認修改';
   document.getElementById('subbtn').disabled = false;
   document.getElementById('subbtn').onclick = confirmModify;
@@ -530,8 +578,10 @@ window.confirmModify = async function(){
   if(locked){ toast('⛔ 已截止！'); return; }
   const miss = votes.filter(v=>!v).length;
   if(miss){ toast(`⚠️ 還有 ${miss} 場未選！`); return; }
+  const missMgn = margins.filter(v=>v===null).length;
+  if(missMgn){ toast(`⚠️ 還有 ${missMgn} 場未選差距！`); return; }
   const key = myName.toLowerCase().replace(/\s+/g,'_');
-  await setDoc(doc(colRef,key),{name:myName,votes:[...votes],time:Date.now(),modified:true});
+  await setDoc(doc(colRef,key),{name:myName,votes:[...votes],margins:[...margins],time:Date.now(),modified:true});
   myModified = true; modifyMode = false;
   toast('✅ 修改已確認！修改機會已用完');
   document.getElementById('subbtn').textContent = '🏀 提交預測';
@@ -547,12 +597,14 @@ window.deleteMe = async function(){
   const key = myName.toLowerCase().replace(/\s+/g,'_');
   await deleteDoc(doc(colRef,key));
   votes = new Array(MATCH_COUNT).fill(null);
+  margins = new Array(MATCH_COUNT).fill(null);
   hasSubmitted = false; myModified = false;
   document.getElementById('subbtn').disabled = false;
   document.getElementById('poster-link').style.display = 'none';
   document.getElementById('modify-btn').style.display = 'inline-block';
   document.getElementById('modify-used').style.display = 'none';
   document.querySelectorAll('.vbtn').forEach(b=>b.classList.remove('sel-l','sel-r'));
+  document.querySelectorAll('.mbtn').forEach(b=>b.classList.remove('sel'));
   toast('🗑 預測已刪除');
 };
 
@@ -579,10 +631,15 @@ function renderLB(){
   }
 
   const scored = db.map(e=>{
-    let correct=0;
-    (e.votes||[]).forEach((v,i)=>{if(results[i]&&v===results[i])correct++;});
-    return{...e,correct};
-  }).sort((a,b)=>b.correct-a.correct||a.time-b.time);
+    let correct=0, marginCorrect=0;
+    (e.votes||[]).forEach((v,i)=>{
+      if(results[i]&&v===results[i]){
+        correct++;
+        if(marginResults[i]!==null && e.margins && e.margins[i]===marginResults[i]) marginCorrect++;
+      }
+    });
+    return{...e,correct,marginCorrect};
+  }).sort((a,b)=>b.correct-a.correct||b.marginCorrect-a.marginCorrect||a.time-b.time);
 
   document.getElementById('lb-body').innerHTML = scored.map((e,i)=>{
     const isMe = e.name.toLowerCase()===myName.toLowerCase();
@@ -590,13 +647,25 @@ function renderLB(){
     const allCorrect = allDone && e.correct===MATCH_COUNT;
     const cells = (e.votes||[]).map((v,idx)=>{
       if(!v) return `<div class="lb-pick">—</div>`;
-      if(results[idx]===null) return `<div class="lb-pick on">${v}</div>`;
+      const mVal = e.margins ? e.margins[idx] : null;
+      const mLabel = mVal!==null && mVal!==undefined ? MARGIN_LABELS[mVal] : '';
+      if(results[idx]===null){
+        const mTag = mLabel ? `<span class="margin-tag">${mLabel}</span>` : '';
+        return `<div class="lb-pick on">${v}${mTag}</div>`;
+      }
       const ok = v===results[idx];
-      return `<div class="lb-pick ${ok?'correct':'wrong'}">${ok?'✓':'✗'} ${v}</div>`;
+      const mDecided = marginResults[idx]!==null;
+      const mOk = mDecided && mVal===marginResults[idx];
+      const mTag = mLabel ? `<span class="margin-tag${mDecided?(mOk?' m-ok':' m-wrong'):''}">${mLabel}</span>` : '';
+      return `<div class="lb-pick ${ok?'correct':'wrong'}">${ok?'✓':'✗'} ${v}${mTag}</div>`;
     }).join('');
-    const sub=(e.votes||[]).join(' · ');
+    const sub=(e.votes||[]).map((v,i)=>{
+      const mVal=e.margins?e.margins[i]:null;
+      return v?`${v}${mVal!==null?`(${MARGIN_LABELS[mVal]})`:''}` :'—';
+    }).join(' · ');
     const scoreClass=`s${e.correct}`;
     const scoreBadge=decided>0?`<span class="score-badge ${scoreClass}">${e.correct}/${decided} 正確</span>`:'';
+    const mBadge=(decided>0&&e.marginCorrect>0)?`<span class="margin-badge">🎯 差距${e.marginCorrect}準</span>`:'';
     const crownHtml=allCorrect?`<span class="crown">👑</span><span class="hao">厲害！</span>`:'';
     const delBtn=(!locked&&isMe)?`<button class="del-btn" onclick="deleteMe()">🗑 刪除</button>`:`<div></div>`;
     const rowStyle=allCorrect?'style="background:rgba(255,215,0,.08);border-left:3px solid #FFD700"':'';
@@ -604,7 +673,7 @@ function renderLB(){
       <div class="lb-row ${isMe?'me':''}" ${rowStyle}>
         <div class="lb-rank ${allCorrect?'g':CLS[i]||''}">${allCorrect?'👑':SYM[i]||(i+1)}</div>
         <div class="lb-name">
-          <div class="crown-row">${esc(e.name)}${isMe?'<span class="me-tag">← 你</span>':''}${PREV_CHAMPS.some(n=>n.toLowerCase()===e.name.toLowerCase())?'<span class="prev-champ">👑 昨日冠軍</span>':PREV_RUNNERS.some(n=>n.toLowerCase()===e.name.toLowerCase())?'<span class="prev-runner">🥈 昨日亞軍</span>':''}${crownHtml}${scoreBadge}</div>
+          <div class="crown-row">${esc(e.name)}${isMe?'<span class="me-tag">← 你</span>':''}${PREV_CHAMPS.some(n=>n.toLowerCase()===e.name.toLowerCase())?'<span class="prev-champ">👑 昨日冠軍</span>':PREV_RUNNERS.some(n=>n.toLowerCase()===e.name.toLowerCase())?'<span class="prev-runner">🥈 昨日亞軍</span>':''}${crownHtml}${scoreBadge}${mBadge}</div>
           <div class="lb-sub">${sub}</div>
         </div>
         ${cells}${delBtn}
@@ -624,6 +693,7 @@ onSnapshot(resultsRef,(snap)=>{
     results=[d.r0||null,d.r1||null,d.r2||null];
     scoreA=[d.a0||null,d.a1||null,d.a2||null];
     scoreB=[d.b0||null,d.b1||null,d.b2||null];
+    marginResults=[d.m0??null,d.m1??null,d.m2??null];
     updateCardScores();
   }
   renderLB();

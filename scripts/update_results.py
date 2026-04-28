@@ -65,13 +65,24 @@ def main():
 
     print("📊 賽果:", results)
 
+    def margin_cat(sa, sb):
+        """回傳差距分類：0=≤10, 1=11-20, 2=21+"""
+        if not sa or not sb:
+            return None
+        diff = abs(int(sa) - int(sb))
+        if diff <= 10: return 0
+        elif diff <= 20: return 1
+        else: return 2
+
     fields = {}
     for i in range(3):
         fields[f"r{i}"] = {"stringValue": results[i]}  if results[i]  else {"nullValue": None}
         fields[f"a{i}"] = {"stringValue": scores_a[i]} if scores_a[i] else {"nullValue": None}
         fields[f"b{i}"] = {"stringValue": scores_b[i]} if scores_b[i] else {"nullValue": None}
+        mc = margin_cat(scores_a[i], scores_b[i])
+        fields[f"m{i}"] = {"integerValue": mc} if mc is not None else {"nullValue": None}
 
-    field_names = [f"r{i}" for i in range(3)] + [f"a{i}" for i in range(3)] + [f"b{i}" for i in range(3)]
+    field_names = [f"r{i}" for i in range(3)] + [f"a{i}" for i in range(3)] + [f"b{i}" for i in range(3)] + [f"m{i}" for i in range(3)]
     mask = "&".join(f"updateMask.fieldPaths={f}" for f in field_names)
     r = requests.patch(f"{FIRESTORE_URL}?{mask}", json={"fields": fields}, timeout=10)
     print("✅ 成功" if r.status_code == 200 else f"❌ {r.status_code}: {r.text}")
