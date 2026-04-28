@@ -37,8 +37,21 @@ def parse_event(event):
             winner_name = TEAM_MAP.get(c["team"]["displayName"])
     return winner_name, away.get("score", ""), home.get("score", "")
 
+ACTIVE_STATUSES = {"STATUS_IN_PROGRESS", "STATUS_HALFTIME", "STATUS_FINAL", "STATUS_END_PERIOD"}
+ALL_TEAMS = {t for a, b in MATCHES.values() for t in (a, b)}
+
 def main():
     data = requests.get(ESPN_URL, timeout=10).json()
+
+    # 篩選相關比賽，若全部尚未開始則跳過
+    relevant = [
+        e for e in data.get("events", [])
+        if {TEAM_MAP.get(c["team"]["displayName"]) for c in e["competitions"][0]["competitors"]} & ALL_TEAMS
+    ]
+    active = [e for e in relevant if e["status"]["type"]["name"] in ACTIVE_STATUSES]
+    if not active:
+        print("⏭ 比賽尚未開始，跳過更新")
+        return
 
     results  = {i: None for i in range(3)}
     scores_a = {i: None for i in range(3)}
