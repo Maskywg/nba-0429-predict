@@ -662,7 +662,7 @@ function renderLB(){
       }
     });
     return{...e,correct,marginCorrect,marginDistance};
-  }).sort((a,b)=>b.correct-a.correct||b.marginCorrect-a.marginCorrect||a.marginDistance-b.marginDistance||a.time-b.time);
+  }).sort((a,b)=>b.correct-a.correct||b.marginCorrect-a.marginCorrect||a.marginDistance-b.marginDistance);
 
   document.getElementById('lb-body').innerHTML = scored.map((e,i)=>{
     const isMe = e.name.toLowerCase()===myName.toLowerCase();
