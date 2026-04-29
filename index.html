@@ -651,15 +651,18 @@ function renderLB(){
   }
 
   const scored = db.map(e=>{
-    let correct=0, marginCorrect=0;
+    let correct=0, marginCorrect=0, marginDistance=0;
     (e.votes||[]).forEach((v,i)=>{
       if(results[i]&&v===results[i]){
         correct++;
-        if(marginResults[i]!==null && e.margins && e.margins[i]===marginResults[i]) marginCorrect++;
+        if(marginResults[i]!==null && e.margins && e.margins[i]!=null){
+          if(e.margins[i]===marginResults[i]) marginCorrect++;
+          marginDistance += Math.abs(e.margins[i]-marginResults[i]);
+        }
       }
     });
-    return{...e,correct,marginCorrect};
-  }).sort((a,b)=>b.correct-a.correct||b.marginCorrect-a.marginCorrect||a.time-b.time);
+    return{...e,correct,marginCorrect,marginDistance};
+  }).sort((a,b)=>b.correct-a.correct||b.marginCorrect-a.marginCorrect||a.marginDistance-b.marginDistance||a.time-b.time);
 
   document.getElementById('lb-body').innerHTML = scored.map((e,i)=>{
     const isMe = e.name.toLowerCase()===myName.toLowerCase();
